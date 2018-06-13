@@ -3,7 +3,9 @@ app = Flask(__name__)
 
 @app.route('/')
 def home():
-  return render_template('index.html', x=42)
+  return "hello"
+  #return render_template('index.html', x=42)
+
 """
 @app.route('/js/<path:path>')
 def send_js(path):
