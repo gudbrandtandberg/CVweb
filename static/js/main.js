@@ -1,11 +1,23 @@
+cfg = {position: "start",
+           dropOffBoard: "trash",
+           orientation: "white",
+           sparePieces: true,
+           showErrors: "console"
+        }
+
+var board = ChessBoard('board', cfg);
+
 var init = function() {
-        
-    var board = ChessBoard('board', 'start');
+
+    // The displayed chessboard (chessboard.js)
+
+    //var board = ChessBoard('board', cfg);
 
     var endpoint = document.getElementById("endpoint").innerHTML
     
     var cv_algo_url = endpoint + "cv_algo/"
     var feedback_url = endpoint + "feedback/"
+    var analyze_url = endpoint + "analyze/"
 
     $("#upload-form").submit(function(event) {
         event.preventDefault()
@@ -26,17 +38,15 @@ var init = function() {
                 
                 if (res.error == "false") {
                     setFEN(res.FEN)
-                    //$("#feedback_pane").css("visibility", "visible")
                     document.getElementById("raw-id-input").value = res.id
                     document.getElementById("feedback-pane").style.display = "block"
                 } else {
                     console.log(res)
-                    alert(res.errorMsg)
                 }
             },
             error: function(xmlHttpRequest, textStatus, errorThrown) {
-                if(xmlHttpRequest.readyState == 0 || xmlHttpRequest.status == 0) {
-                    alert("prematurely aborting ajax request..")
+                if (xmlHttpRequest.readyState == 0 || xmlHttpRequest.status == 0) {
+                    alert("Connection to ChessVision server failed. It is probably sleeping..")
                     return
                 } else {
                     alert(textStatus)
@@ -48,7 +58,14 @@ var init = function() {
     $("#feedback-form").submit(function(event) {
     
         event.preventDefault()
+        var position = board.position()
+        console.log(position)
+
         var formData = new FormData(this);
+        formData.append("position", JSON.stringify(position))
+
+        flip = document.getElementById("reversed-input").checked ? "true" : "false"
+        formData.append("flip", flip)
     
         $.ajax({
             url: feedback_url,
@@ -68,9 +85,38 @@ var init = function() {
                 },
             error: function(data) {
                 alert(data)
+                console.log(data)
                 }
             })
         })
+
+    $("#analyze-form").submit(function(event) {
+        event.preventDefault()
+        var formData = new FormData(this);
+
+        // get valid fen from board + input tags.
+
+        formData.append("FEN", "rnbqkbnr/pp1ppppp/8/2p5/4P3/5N2/PPPP1PPP/RNBQKB1R")
+
+        $.ajax({
+            url: analyze_url,
+            method: "POST",
+            data: formData, 
+            cache: false,
+            contentType: false,
+            processData: false,
+            success: function(data) {
+                //res = JSON.parse(data)
+                alert(data)
+                console.log(data)       
+                },
+            error: function(data) {
+                alert(data)
+                console.log(data)
+                }
+            })
+    })
+
     document.getElementById('image-input').onchange = function (evt) {
         var tgt = evt.target || window.event.srcElement,
             files = tgt.files;
@@ -85,18 +131,19 @@ var init = function() {
             }
             fr.readAsDataURL(files[0]);
         }
-
-        // Not supported
         else {
-            // fallback -- perhaps submit the input to an iframe and temporarily store
-            // them on the server until the user's session ends.
+            console.log("Cancelled load..")
         }
     }
 
     }; // end init()
 
 var setFEN = function(fen) {
-    var board = ChessBoard('board', fen);
+    
+    orientation = document.getElementById("reversed-input").checked ? "black" : "white"
+    board.orientation(orientation)
+    board.position(fen, true)
+    
 }
 
 $(document).ready(init);
