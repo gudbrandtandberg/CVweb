@@ -80,7 +80,7 @@ var init = function() {
                 if (res.success == "true") {
                     alert("Thanks for your feedback!")
                 } else {
-                    alert("Your feedback was not taken into consideration")
+                    alert("Something went wrong, your feedback was not taken into consideration")
                     }           
                 },
             error: function(data) {
@@ -95,8 +95,11 @@ var init = function() {
         var formData = new FormData(this);
 
         // get valid fen from board + input tags.
+        var fen = board.fen()
+        fen = expandFen(fen)
+        console.log(fen)
 
-        formData.append("FEN", "rnbqkbnr/pp1ppppp/8/2p5/4P3/5N2/PPPP1PPP/RNBQKB1R")
+        formData.append("FEN", fen)
 
         $.ajax({
             url: analyze_url,
@@ -106,16 +109,36 @@ var init = function() {
             contentType: false,
             processData: false,
             success: function(data) {
-                //res = JSON.parse(data)
-                alert(data)
-                console.log(data)       
+                res = JSON.parse(data)
+                if (res.success == "false") {
+                    alert("Analysis failed..")
+                    return
+                }
+                alert("Best move is " + res.bestMove)
                 },
             error: function(data) {
-                alert(data)
+                alert("error")
                 console.log(data)
                 }
             })
     })
+
+    var expandFen = function(fen) {
+        var move = document.querySelector('input[name="move"]:checked').value;
+        var castle = "-"
+        var ep = "-"
+        var halfmove = "0"
+        var fullmove = "1"
+        var sep = " "
+        var toAdd = [move, castle, ep, halfmove, fullmove]
+
+        for (var i=0; i < toAdd.length; i++) {
+            fen += sep
+            fen += toAdd[i]
+        }
+
+        return fen
+    }
 
     document.getElementById('image-input').onchange = function (evt) {
         var tgt = evt.target || window.event.srcElement,
