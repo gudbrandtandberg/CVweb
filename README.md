@@ -1,14 +1,20 @@
 # CVweb
-A Web App that uses the ChessVision project
 
-Run 
+A Web App that uses the ChessVision project.
+
+## Running
+
+If you have the [ChessVision](https://github.com/gudbrandtandberg/ChessVision) package installed, make sure have `python cv_endpoint.py` running in a seperate terminal window and run 
 
 ```python main.py```
 
+to start the webserver on `localhost:5000`.
 
-The app assumes a host is listening for __POST__ requests on __http://localhost:5000__.
-The post should contain exactly one image file in the __FILES__ variable.
-The response from this host is either a FEN string containing an extracted chess position, or an error message. 
+If you do not have ChessVision installed, set the line `local = False` in `main.py` and start the server. __Note:__ this will only work when the official ChessVision server is running.
+
+### Image upload
+- https://github.com/blueimp/JavaScript-Load-Image
+
 
 ### Cropping: 
 - https://codepen.io/nakome/pen/vmKwQg

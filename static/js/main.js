@@ -1,7 +1,7 @@
-cfg = {position: "start",
+cfg = {position: "clear",
            dropOffBoard: "trash",
            orientation: "white",
-           sparePieces: true,
+           sparePieces: false,
            showErrors: "console"
         }
 
@@ -22,7 +22,7 @@ var init = function() {
     $("#upload-form").submit(function(event) {
         event.preventDefault()
         var file = document.getElementById("image-input").files[0]
-        // TODO input check. 
+        // TODO input check, crop. etc.
         var formData = new FormData(this);
         
         $.ajax({
@@ -39,7 +39,10 @@ var init = function() {
                 if (res.error == "false") {
                     setFEN(res.FEN)
                     document.getElementById("raw-id-input").value = res.id
-                    document.getElementById("feedback-pane").style.display = "block"
+                    $("#feedback-pane").show()
+                    $("#image-preview").hide()
+                    $("#board").show()
+
                 } else {
                     console.log(res)
                 }
@@ -141,6 +144,9 @@ var init = function() {
     }
 
     document.getElementById('image-input').onchange = function (evt) {
+
+        $("#board").hide()
+
         var tgt = evt.target || window.event.srcElement,
             files = tgt.files;
 
@@ -150,13 +156,15 @@ var init = function() {
             fr.onload = function(data) {
                 var imageData = data.target.result
                 // Show preview of uploaded image
-                document.getElementById("input-preview").src = imageData
+                document.getElementById("image-preview").src = imageData
             }
             fr.readAsDataURL(files[0]);
         }
         else {
             console.log("Cancelled load..")
         }
+
+        $("#image-preview").show()
     }
 
     }; // end init()
