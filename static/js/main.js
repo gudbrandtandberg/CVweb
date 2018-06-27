@@ -1,17 +1,42 @@
-cfg = {position: "clear",
+var board, cropper, cropperOptions;
+
+var init = function() {
+
+    $("#board-state-pane").hide()
+    $("#edit-analyze-pane").hide()
+    //$("#image-preview").hide()
+    //$("#board").hide()
+    //$("#preview-container").show()
+    $("#board-container").hide()
+
+    cfg = {position: "8/8/8/8/8/8/8/8 w KQkq -",
            dropOffBoard: "trash",
            orientation: "white",
            sparePieces: false,
            showErrors: "console"
         }
 
-var board = ChessBoard('board', cfg);
-
-var init = function() {
-
     // The displayed chessboard (chessboard.js)
+    board = ChessBoard('board', cfg);
+    $(window).resize(board.resize);
 
-    //var board = ChessBoard('board', cfg);
+    cropperOptions = { dragMode: "move",
+                cropBoxMovable: false,
+                cropBoxResizable: false,
+                autoCropArea: 1.0,
+                background: true,
+                guides: true,
+                center: false,
+                highlight: true,
+                modal: true,
+                ready: function(event) {
+                    console.log("cropper ready")
+                },
+                crop: function(event) {
+                    console.log("cropping");
+                  }
+                }
+
 
     var endpoint = document.getElementById("endpoint").innerHTML
     
@@ -21,10 +46,25 @@ var init = function() {
 
     $("#upload-form").submit(function(event) {
         event.preventDefault()
-        var file = document.getElementById("image-input").files[0]
-        // TODO input check, crop. etc.
-        var formData = new FormData(this);
+
+        //var file = document.getElementById("image-input").files[0]
+        //cropper = $("#image-input").data('cropper');
+        //blob = cropper.getCroppedCanvas().toBlob()
+
+        dataURL = cropper.getCroppedCanvas().toDataURL('image/jpeg')
         
+        var blobBin = atob(dataURL.split(',')[1]);
+        var array = [];
+        for(var i = 0; i < blobBin.length; i++) {
+            array.push(blobBin.charCodeAt(i));
+        }
+        var file=new Blob([new Uint8Array(array)], {type: 'image/jpeg'});
+        var formData = new FormData();
+        formData.append("file", file);
+
+        // TODO input check, crop. etc.
+    
+
         $.ajax({
             url: cv_algo_url,
             method: "POST", 
@@ -37,12 +77,13 @@ var init = function() {
                 res = JSON.parse(data)
                 
                 if (res.error == "false") {
+                    $("#board-container").show()
+                    $("#preview-container").hide()
+                    
+                    $("#analyze-edit-pane").show()
                     setFEN(res.FEN)
                     document.getElementById("raw-id-input").value = res.id
-                    $("#feedback-pane").show()
-                    $("#image-preview").hide()
-                    $("#board").show()
-
+                    
                 } else {
                     console.log(res)
                 }
@@ -58,116 +99,45 @@ var init = function() {
         })
     })
 
-    $("#feedback-form").submit(function(event) {
-    
-        event.preventDefault()
-        var position = board.position()
-        console.log(position)
+      var input, canvas, context, output;
+      input = document.getElementById("image-input");
+      canvas = document.getElementById("image-preview");
+      context = canvas.getContext('2d');
+      output = document.getElementById("output");
+      
+      
+      input.onchange = function() {
+        
+        $("#preview-container").show()
+        var reader = new FileReader();
+        
+        reader.addEventListener("loadend", function(arg) {
 
-        var formData = new FormData(this);
-        formData.append("position", JSON.stringify(position))
+          var src_image = new Image();
+          
+          src_image.onload = function() {
+            
+            canvas.height = src_image.height;
+            canvas.width = src_image.width;
+            context.drawImage(src_image, 0, 0);
+            
+            $("#image-preview").cropper(cropperOptions);
+            cropper = $("#image-preview").data("cropper");
 
-        flip = document.getElementById("reversed-input").checked ? "true" : "false"
-        formData.append("flip", flip)
-    
-        $.ajax({
-            url: feedback_url,
-            method: "POST",
-            data: formData, 
-            cache: false,
-            contentType: false,
-            processData: false,
-            success: function(data) {
-                res = JSON.parse(data)
-                document.getElementById("feedback-pane").style.display = "none"
-                if (res.success == "true") {
-                    alert("Thanks for your feedback!")
-                } else {
-                    alert("Something went wrong, your feedback was not taken into consideration")
-                    }           
-                },
-            error: function(data) {
-                alert(data)
-                console.log(data)
-                }
-            })
-        })
+            cropper.replace(this.src)
+          }
 
-    $("#analyze-form").submit(function(event) {
-        event.preventDefault()
-        var formData = new FormData(this);
+          src_image.src = this.result;
 
-        // get valid fen from board + input tags.
-        var fen = board.fen()
-        fen = expandFen(fen)
-        console.log(fen)
+          
+        });
 
-        formData.append("FEN", fen)
+        reader.readAsDataURL(this.files[0]);
+        $("#board-state-pane").show()
+        $("#board-container").hide()
+      };
 
-        $.ajax({
-            url: analyze_url,
-            method: "POST",
-            data: formData, 
-            cache: false,
-            contentType: false,
-            processData: false,
-            success: function(data) {
-                res = JSON.parse(data)
-                if (res.success == "false") {
-                    alert("Analysis failed..")
-                    return
-                }
-                alert("Best move is " + res.bestMove)
-                },
-            error: function(data) {
-                alert("error")
-                console.log(data)
-                }
-            })
-    })
-
-    var expandFen = function(fen) {
-        var move = document.querySelector('input[name="move"]:checked').value;
-        var castle = "-"
-        var ep = "-"
-        var halfmove = "0"
-        var fullmove = "1"
-        var sep = " "
-        var toAdd = [move, castle, ep, halfmove, fullmove]
-
-        for (var i=0; i < toAdd.length; i++) {
-            fen += sep
-            fen += toAdd[i]
-        }
-
-        return fen
-    }
-
-    document.getElementById('image-input').onchange = function (evt) {
-
-        $("#board").hide()
-
-        var tgt = evt.target || window.event.srcElement,
-            files = tgt.files;
-
-        // FileReader support
-        if (FileReader && files && files.length) {
-            var fr = new FileReader();
-            fr.onload = function(data) {
-                var imageData = data.target.result
-                // Show preview of uploaded image
-                document.getElementById("image-preview").src = imageData
-            }
-            fr.readAsDataURL(files[0]);
-        }
-        else {
-            console.log("Cancelled load..")
-        }
-
-        $("#image-preview").show()
-    }
-
-    }; // end init()
+} // end init
 
 var setFEN = function(fen) {
     
@@ -176,5 +146,6 @@ var setFEN = function(fen) {
     board.position(fen, true)
     
 }
+
 
 $(document).ready(init);
